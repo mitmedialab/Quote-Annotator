@@ -8,22 +8,25 @@ from quoteworker.celery import app
 logger = get_task_logger(__name__)
 SAVE_TO_DB = True  # really save results to the DB?
 SNIPPET_WINDOW_SIZE = 100  # how many chars before or after the quote to save for context into the DB
-TIMEOUT = 2 * 60 * 1000  # two minutes
 
-def get_annotations(text):
-    """
-    Send the story text to a 3rd party Stanford NER install to parse out quotes (and everything else)
-    :param text: the text of the story
-    :return: JSON results from Stanford NER extration, with a 'quotes' property
-    """
-    response = requests.post(
-        'http://'+NLP_URL+'/?properties={"timeout":50000,"annotators":"tokenize,ssplit,pos,lemma,ner,depparse,coref,quote","outputFormat":"json"}',
+
+def get_annotations(stories_id, text):
+    r = requests.post(
+        'http://' + NLP_URL + '/?properties={"annotators":"tokenize,ssplit,pos,lemma,ner,depparse,coref,quote","outputFormat":"json"}',
         data=text.encode('utf-8'))
-    try:
-        return response.json()
-    except json.JSONDecodeError as jse:
-        logger.error("Couldn't decode json, got: {}".format(response.text))
-        raise jse
+    if r.status_code is not requests.codes.ok:
+        if "java.lang.ArrayIndexOutOfBoundsException" in r.text:
+            # tell Celery to retry it itself with a standard rate
+            raise RuntimeError(
+                "Failed on story {} - first one always fails, putting back on queue".format(stories_id))
+        elif "We're sorry, but something went wrong (500)" in r.text:
+            # save empty quotes, but processed
+            logger.warning("Failed on story {} - some internal proxy error (prob too long)".format(stories_id))
+            return {'quotes': []}
+        else:
+            # something else happened... maybe mismatch of quotes?
+            raise RuntimeError("Failed on story {} - some other error: {}".format(stories_id, r.text[:100]))
+    return r.json()
 
 
 @app.task(serializer='json', bind=True)
@@ -37,14 +40,14 @@ def parse_quotes_to_db(self, story):
     if 'text' not in story:
         logger.error('{} - no text')
         return
-    elif len('text') == 0:
+    elif len(story['text']) == 0:
         logger.warning('{} - no chars in text')
         # OK to save the empty list of quotes here because we don't have any text in story
     else:
         try:
-            document = get_annotations(story['text'])
+            document = get_annotations(story['stories_id'], story['text'])
         except json.JSONDecodeError:
-            return
+            raise RuntimeError("Failed on story {} - returned OK but couldn't decode any json".format(story['stories_id']))
         # parse out quotes into a nice format
         logger.debug(document['quotes'])
         for q in document['quotes']:
@@ -70,11 +73,11 @@ def parse_quotes_to_db(self, story):
                 info['speaker'] = q['speaker']
                 info['canonicalSpeaker'] = q['canonicalSpeaker']
             quotes.append(info)
-    # make a local connection to DB, this is in its own thread
+    # make a local connection to DB, because this is in its own thread
     collection = get_db_client()
-    # write all the quotes to the DB
-    if SAVE_TO_DB:
-        collection.update_one({'stories_id': story['stories_id']}, {'$set': {'quotes': quotes}})
+    if SAVE_TO_DB:  # write all the quotes to the DB
+        collection.update_one({'stories_id': story['stories_id']},
+                              {'$push': {'quotes': quotes, 'annotatedWithQuotes': True}})
         logger.info('{} - {} quotes found (saved to DB)'.format(story['stories_id'], len(quotes)))
     else:
         logger.info('{} - {} quotes found (NOT SAVED)'.format(story['stories_id'], len(quotes)))
