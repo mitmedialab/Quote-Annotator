@@ -10,10 +10,11 @@ Dev Installation
  2. `source venv/bin/activate` - to activate your virtualenv
  3. `pip install -r requirements.txt` - to install the dependencies
 
-### Configuration
+Configuration
+-------------
 
-Copy the ``.env.template` to `.env` and then edit it.
-Change the DB_NAME and COLLECTION_NAME in `quoteworker/__init__.py`
+1. Copy the `.env.template` to `.env` and then edit it.
+2. Change the DB_NAME and COLLECTION_NAME in `quoteworker/__init__.py`
 
 Use
 ---
