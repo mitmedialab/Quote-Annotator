@@ -12,8 +12,11 @@ logger = logging.getLogger(__name__)
 logger.info("------------------------------------------------------------------------")
 logger.info("Starting up Quote Worker")
 
-DB_NAME = "mc-quotes2"
-COLLECTION_NAME = "define_american"
+DB_NAME = os.environ['DB_NAME']
+logger.info("DB_NAME: {}".format(DB_NAME))
+
+COLLECTION_NAME = os.environ['COLLECTION_NAME']
+logger.info("COLLECTION_NAME: {}".format(COLLECTION_NAME))
 
 BROKER_URL = os.environ['BROKER_URL']
 logger.info("BROKER_URL: {}".format(BROKER_URL))

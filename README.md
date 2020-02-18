@@ -13,6 +13,7 @@ Dev Installation
 ### Configuration
 
 Copy the ``.env.template` to `.env` and then edit it.
+Change the DB_NAME and COLLECTION_NAME in `quoteworker/__init__.py`
 
 Use
 ---
