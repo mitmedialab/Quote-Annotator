@@ -20,7 +20,7 @@ class AnnotateTest(unittest.TestCase):
         assert results['quotes'][0]['speaker'] == 'Rahul Bhargava'
 
     def testLongRunningAnnotate(self):
-        with open(os.path.join('fixtures', '1340333046.txt'), 'r') as f:
+        with open(os.path.join('quoteworker', 'test', 'fixtures', '1340333046.txt'), 'r') as f:
             text = f.read()
             start = datetime.datetime.now()
             results = get_annotations('1340333046', text[0:95000])  # trim it to max corenlp length
