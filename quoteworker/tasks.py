@@ -30,29 +30,29 @@ def get_annotations(stories_id, text):
 
 
 @app.task(serializer='json', bind=True)
-def parse_quotes_to_db(self, story):
+def parse_quotes_to_db(self, job):
     """
     An asynchronous task that accepts a story with text, parses out any quotes, and saves info about them back to the DB
     :param self:
     :param story: a story object with 'text' and 'stories_id' properties
     """
     quotes = []
-    if 'text' not in story:
+    if 'text' not in job:
         logger.error('{} - no text')
         return
-    elif len(story['text']) == 0:
+    elif len(job['text']) == 0:
         logger.warning('{} - no chars in text')
         # OK to save the empty list of quotes here because we don't have any text in story
     else:
         try:
-            document = get_annotations(story['stories_id'], story['text'])
+            document = get_annotations(job['stories_id'], job['text'])
         except json.JSONDecodeError:
-            raise RuntimeError("Failed on story {} - returned OK but couldn't decode any json".format(story['stories_id']))
+            raise RuntimeError("Failed on story {} - returned OK but couldn't decode any json".format(job['stories_id']))
         # parse out quotes into a nice format
         logger.debug(document['quotes'])
         for q in document['quotes']:
             snippet_begin = max(0, q['beginIndex'] - SNIPPET_WINDOW_SIZE)
-            snippet_end = min(q['endIndex'] + SNIPPET_WINDOW_SIZE, len(story['text']))
+            snippet_end = min(q['endIndex'] + SNIPPET_WINDOW_SIZE, len(job['text']))
             info = {
                 'index': q['id'],
                 'text': q['text'],
@@ -62,7 +62,7 @@ def parse_quotes_to_db(self, story):
                 'end_token': q['endToken'],
                 'begin_sentence': q['beginSentence'],
                 'end_sentence': q['endSentence'],
-                'snippet': story['text'][snippet_begin:snippet_end]
+                'snippet': job['text'][snippet_begin:snippet_end]
             }
             if 'mention' in q:
                 info['mention'] = q['mention']
@@ -76,8 +76,8 @@ def parse_quotes_to_db(self, story):
     # make a local connection to DB, because this is in its own thread
     collection = get_db_client()
     if SAVE_TO_DB:  # write all the quotes to the DB
-        collection.update_one({'stories_id': story['stories_id']},
-                              {'$push': {'quotes': quotes, 'annotatedWithQuotes': True}})
-        logger.info('{} - {} quotes found (saved to DB)'.format(story['stories_id'], len(quotes)))
+        collection.update_one({'stories_id': job['stories_id']},
+                              {'$set': {'quotes': quotes, 'annotatedWithQuotes': True}})
+        logger.info('{} - {} quotes found (saved to DB)'.format(job['stories_id'], len(quotes)))
     else:
-        logger.info('{} - {} quotes found (NOT SAVED)'.format(story['stories_id'], len(quotes)))
+        logger.info('{} - {} quotes found (NOT SAVED)'.format(job['stories_id'], len(quotes)))
