@@ -76,8 +76,11 @@ def parse_quotes_to_db(self, job):
     # make a local connection to DB, because this is in its own thread
     collection = get_db_client()
     if SAVE_TO_DB:  # write all the quotes to the DB
-        collection.update_one({'stories_id': job['stories_id']},
+        result = collection.update_one({'stories_id': int(job['stories_id'])},
                               {'$set': {'quotes': quotes, 'annotatedWithQuotes': True}})
-        logger.info('{} - {} quotes found (saved to DB)'.format(job['stories_id'], len(quotes)))
+        if result.modified_count == 0:
+            logger.warning('{} - not modified ({} matching, {} modified'.format(job['stories_id'], result.matched_count, result.modified_count))
+        else:
+            logger.info('{} - {} quotes found (saved to DB)'.format(job['stories_id'], len(quotes)))
     else:
         logger.info('{} - {} quotes found (NOT SAVED)'.format(job['stories_id'], len(quotes)))
