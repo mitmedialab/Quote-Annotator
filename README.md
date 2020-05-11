@@ -1,20 +1,27 @@
 Media Cloud Story Quote Extractor
 =================================
 
-A helper that will extract quotes from a DB of stories
+A helper that will extract quotes from a DB of stories from Media cloud. This starts with a Mongo 
+database full of stories, where each document in the database is a `story` that has a `story_text`
+property.
+
+Requirements:
+* Python3 - we use [pyenv](https://github.com/pyenv/pyenv) to manage different versions
+p* Stanford CoreNLP Server - This requires you to be running a copy of the [Stanford CoreNLP Server](https://stanfordnlp.github.io/CoreNLP/corenlp-server.html),
+([here is my fork](https://github.com/rahulbot/stanford-corenlp-docker) of the Docker install with some tweaks for the 
+annotators we use for quote extraction).
+* Redis - we use this via celery as a queue for parallel processing
+* Mongo - this holds the story information  
 
 Dev Installation
 ----------------
 
- 1. `virtualenv venv` to create your virtualenv
- 2. `source venv/bin/activate` - to activate your virtualenv
- 3. `pip install -r requirements.txt` - to install the dependencies
+Install the dependencies `pip install -r requirements.txt`. 
 
 Configuration
 -------------
 
-1. Copy the `.env.template` to `.env` and then edit it.
-2. Change the DB_NAME and COLLECTION_NAME in `quoteworker/__init__.py`
+Copy the `.env.template` to `.env` and then edit it.
 
 Use
 ---

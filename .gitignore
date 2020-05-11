@@ -1,3 +1,4 @@
 .env
 .idea
 *.pyc
+write-stories-to-text.py
