@@ -28,6 +28,7 @@ MONGO_DSN = os.environ['MONGO_DSN']
 logger.info("MONGO_DSN: {}".format(MONGO_DSN))
 
 
+# factory method to a connection to the mongo db full of stories
 def get_db_client():
     client = pymongo.MongoClient(MONGO_DSN)
     db = client[DB_NAME]
