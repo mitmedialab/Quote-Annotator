@@ -76,8 +76,16 @@ def parse_quotes_to_db(self, job):
     # make a local connection to DB, because this is in its own thread
     collection = get_db_client()
     if SAVE_TO_DB:  # write all the quotes to the DB
-        result = collection.update_one({'stories_id': int(job['stories_id'])},
-                              {'$set': {'quotes': quotes, 'annotatedWithQuotes': True}})
+        # support adding to quotes that are already there (ie. for long stories that have been chunked into multiple jobs)
+        if ('add_to_quotes' in job) and (job['add_to_quotes']):
+            result = collection.update_one({'stories_id': int(job['stories_id'])},
+                                           {
+                                               '$set': {'annotatedWithQuotes': True},
+                                               '$push': {'quotes': {'$each': quotes}},
+                                           })
+        else:
+            result = collection.update_one({'stories_id': int(job['stories_id'])},
+                                           {'$set': {'quotes': quotes, 'annotatedWithQuotes': True}})
         if result.modified_count == 0:
             logger.warning('{} - not modified ({} matching, {} modified'.format(job['stories_id'], result.matched_count, result.modified_count))
         else:
