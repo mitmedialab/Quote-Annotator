@@ -1,6 +1,7 @@
 import requests
 from celery.utils.log import get_task_logger
 import json
+import time
 
 from quoteworker import NLP_URL, get_db_client
 from quoteworker.celery import app
@@ -36,6 +37,7 @@ def parse_quotes_to_db(self, job):
     :param self:
     :param story: a story object with 'text' and 'stories_id' properties
     """
+    start = time.time()
     quotes = []
     if 'text' not in job:
         logger.error('{} - no text')
@@ -87,8 +89,11 @@ def parse_quotes_to_db(self, job):
             result = collection.update_one({'stories_id': int(job['stories_id'])},
                                            {'$set': {'quotes': quotes, 'annotatedWithQuotes': True}})
         if result.modified_count == 0:
-            logger.warning('{} - not modified ({} matching, {} modified'.format(job['stories_id'], result.matched_count, result.modified_count))
+            logger.warning('{} - not modified ({} matching, {} modified'.format(
+                job['stories_id'], result.matched_count, result.modified_count))
         else:
-            logger.info('{} - {} quotes found (saved to DB)'.format(job['stories_id'], len(quotes)))
+            end = time.time()
+            logger.info('{}, {} quotes, {} chars, {} secs'.format(
+                job['stories_id'], len(quotes), len(job['text']), end-start))
     else:
         logger.info('{} - {} quotes found (NOT SAVED)'.format(job['stories_id'], len(quotes)))
