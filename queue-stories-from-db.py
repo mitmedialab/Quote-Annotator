@@ -7,10 +7,10 @@ from quoteworker.tasks import parse_quotes_to_db
 logger = logging.getLogger(__name__)
 
 # how many stories do you want to queue (set this to ~4 for testing, then a number more than your total to queue them all)
-BATCH_SIZE = 20000
+BATCH_SIZE = 200000
 
 # we have timeouts with long stories, so split them if longer than this char max
-MAX_CHAR_LEN = 5000
+MAX_CHAR_LEN = 10000
 
 # the property of the Mongo document that will be used as the text to check for quotes
 TEXT_PROP = 'story_text'
@@ -24,7 +24,7 @@ logger.info("Stats:")
 logger.info("  {} total".format(total))
 logger.info("  {} have quotes".format(total - unprocessed))
 logger.info("  {} need quotes".format(unprocessed))
-# sys.exit()
+#sys.exit()
 
 # get ​stories with text without quotes from DB
 logger.info("Fetching...")
